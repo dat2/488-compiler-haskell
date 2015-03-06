@@ -11,18 +11,19 @@ parse488 = scope
 scope :: GenParser Char st AST
 scope = do
   reserved "begin"
-  body <- statementsAndEnd
+  body <- option [] statements
+  reserved "end"
   eof
   return Scope { body = body }
 
 -- statements
-statementsAndEnd :: GenParser Char st [AST]
-statementsAndEnd =
-  manyTill statement $ reserved "end"
+statements :: GenParser Char st [AST]
+statements = many statement
 
 statement :: GenParser Char st AST
 statement =
-  try $ (assignStmt <|> ifThenStmt)
+      assignStmt
+  <|> ifThenStmt
 
 assignStmt :: GenParser Char st AST
 assignStmt = do
@@ -33,11 +34,22 @@ assignStmt = do
 
 ifThenStmt :: GenParser Char st AST
 ifThenStmt = do
+  -- if <expression>
   reserved "if"
   cond <- expression
+
+  -- then <body>
   reserved "then"
-  body <- statementsAndEnd
-  return IfThenStmt { condition = cond, body = body }
+  body <- many1 statement
+
+  -- optional else
+  elseBody <- choice
+    -- try to do the else first
+    [ do { reserved "else"; body <- statements; reserved "end"; return body },
+    -- if that doesn't work, get the end
+      do { reserved "end"; return [] } ]
+
+  return IfThenStmt { condition = cond, trueBody = body, falseBody = elseBody }
 
 -- expressions
 expression :: GenParser Char st AST
