@@ -67,8 +67,8 @@ langDef = T.LanguageDef {
   T.commentLine="%", T.nestedComments=False,
   T.identStart = letter,
   T.identLetter = alphaNum <|> char '_',
-  T.opStart = oneOf "<.-+*/!&&|=>",
-  T.opLetter = oneOf "=.",
+  T.opStart = oneOf "",
+  T.opLetter = oneOf "",
   T.reservedNames=["begin", "end", "if", "then", "end", "else", "while", "do", "loop", "exit", "when", "return", "put", "get", "integer", "boolean", "function", "procedure", "skip", "true", "false", "yields"],
   T.reservedOpNames=["<=", "..", "-", "+", "*", "/", "!", "&", "|", "=", "!=", "<", ">", ">="],
   T.caseSensitive=True

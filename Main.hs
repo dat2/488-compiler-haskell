@@ -21,8 +21,13 @@ main =
 
     parser input = case (parse parse488 sourceName input) of
       Left err -> show err
-      Right x -> "Result: " ++ show x
+      Right x -> show x
   in
     do
+      putStrLn "Input"
+      putStrLn "========================="
       putStrLn $ printLineNumbers source
+      putStrLn ""
+      putStrLn "AST"
+      putStrLn "========================="
       putStrLn $ parser source
