@@ -1,6 +1,9 @@
 import Parser
+import Text.Parsec (parse)
 
-import Text.Parsec (parseTest)
+parser input = case (parse parse488 "" input) of
+  Left err -> show err
+  Right x -> "Result: " ++ x
 
 main =
-  parseTest scope "begin end"
+  putStrLn $ parser "begin end"

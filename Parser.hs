@@ -1,37 +1,31 @@
-module Parser ( scope ) where
+module Parser ( parse488 ) where
 
-import Text.Parsec
+import Text.Parsec.Token
 import Text.ParserCombinators.Parsec
-import qualified Text.Parsec.Token as P
-import qualified Text.ParserCombinators.Parsec.Char as C
 
 -- the parser
--- parse488 :: String -> String
--- parse488 input = case (parse scope input) of
---   Left err -> "err"
---   Right x -> "no error"
+parse488 = scope
 
--- scope :: GenParser Char st String
+scope :: GenParser Char st String
 scope = do
-  reserved "begin"
-  reserved "end"
+  keyword "begin"
+  keyword "end"
   eof
-  return True
-
+  return "Worked!"
 
 -- the lexer
-langDef :: P.LanguageDef st
-langDef = P.LanguageDef {
-  P.commentStart="", P.commentEnd="",
-  P.commentLine="%", P.nestedComments=False,
-  P.identStart = C.letter,
-  P.identLetter = C.alphaNum <|> char '_',
-  P.opStart = C.oneOf "<.-+*/!&&|=>",
-  P.opLetter = C.oneOf "=.",
-  P.reservedNames=["begin", "end", "if", "then", "end", "else", "while", "do", "loop", "exit", "when", "return", "put", "get", "integer", "boolean", "function", "procedure", "skip", "true", "false", "yields"],
-  P.reservedOpNames=["<=", "..", "-", "+", "*", "/", "!", "&", "|", "=", "!=", "<", ">", ">="],
-  P.caseSensitive=True
+langDef :: LanguageDef st
+langDef = LanguageDef {
+  commentStart="", commentEnd="",
+  commentLine="%", nestedComments=False,
+  identStart = letter,
+  identLetter = alphaNum <|> char '_',
+  opStart = oneOf "<.-+*/!&&|=>",
+  opLetter = oneOf "=.",
+  reservedNames=["begin", "end", "if", "then", "end", "else", "while", "do", "loop", "exit", "when", "return", "put", "get", "integer", "boolean", "function", "procedure", "skip", "true", "false", "yields"],
+  reservedOpNames=["<=", "..", "-", "+", "*", "/", "!", "&", "|", "=", "!=", "<", ">", ">="],
+  caseSensitive=True
 }
 
-lexer = P.makeTokenParser langDef
-reserved = P.reserved lexer
+lexer = makeTokenParser langDef
+keyword = reserved lexer
