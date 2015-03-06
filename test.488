@@ -1,0 +1,29 @@
+% test file
+begin
+  integer x, y
+  boolean z
+  x <= x
+  y <= y
+  if z then
+    x <= 1
+  else
+    z <= false
+  end
+
+  % test scope
+  begin % statement
+
+  return (x)
+  % test comment
+  end
+
+  % test while
+  while y do
+
+  end
+
+  % test loop
+  loop
+    x <= y
+  end
+end

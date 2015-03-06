@@ -1,64 +1,135 @@
-module Parser ( parse488 ) where
+module Parser ( parseProgram ) where
 
 import AST
 
 import qualified Text.Parsec.Token as T
 import Text.ParserCombinators.Parsec
+import Text.ParserCombinators.Parsec.Combinator
 
 -- the parser
-parse488 = scope
-
-scope :: GenParser Char st AST
-scope = do
-  reserved "begin"
-  body <- option [] statements
-  reserved "end"
+parseProgram = do
+  program <- scope
   eof
+  return program
+
+scope :: GenParser Char st Stmt
+scope = do
+  whiteSpace -- ignore comments and whitespace
+  body <- between (reserved "begin") (reserved "end") statements
   return Scope { body = body }
 
 -- statements
-statements :: GenParser Char st [AST]
+statements :: GenParser Char st [Stmt]
 statements = many statement
 
-statement :: GenParser Char st AST
+statement :: GenParser Char st Stmt
 statement =
       assignStmt
   <|> ifThenStmt
+  <|> whileDoStmt
+  <|> loopStmt
+  <|> exitStmt
+  <|> returnStmt
+  <|> scope
+  <|> declStmt
 
-assignStmt :: GenParser Char st AST
+assignStmt :: GenParser Char st Stmt
 assignStmt = do
-  id <- ident
+  lhs <- expression
   operator "<="
-  expr <- expression
-  return AssignStmt { lhs = id, rhs = expr }
+  rhs <- expression
+  return AssignStmt { lhs = lhs, rhs = rhs }
 
-ifThenStmt :: GenParser Char st AST
+ifThenStmt :: GenParser Char st Stmt
 ifThenStmt = do
-  -- if <expression>
-  reserved "if"
-  cond <- expression
+  -- if <expression> then <body> end
+  cond <- between (reserved "if") (reserved "then") expression
 
-  -- then <body>
-  reserved "then"
-  body <- many1 statement
+  -- body
+  body <- statements
 
   -- optional else
   elseBody <- choice
     -- try to do the else first
-    [ do { reserved "else"; body <- statements; reserved "end"; return body },
+    [ between (reserved "else") (reserved "end") statements,
     -- if that doesn't work, get the end
       do { reserved "end"; return [] } ]
 
   return IfThenStmt { condition = cond, trueBody = body, falseBody = elseBody }
 
--- expressions
-expression :: GenParser Char st AST
-expression = identExpr
+whileDoStmt :: GenParser Char st Stmt
+whileDoStmt = do
+  -- while <expression> do <statement> end
+  reserved "while"
+  cond <- expression
+  body <- between (reserved "do") (reserved "end") statements
 
-identExpr :: GenParser Char st AST
-identExpr = do
+  return WhileDoStmt { condition = cond, body = body }
+
+loopStmt :: GenParser Char st Stmt
+loopStmt = do
+  -- loop <statement> end
+  body <- between (reserved "loop") (reserved "end") statements
+
+  return LoopStmt { body = body }
+
+exitStmt :: GenParser Char st Stmt
+exitStmt = do
+  reserved "exit"
+
+  expn <- option NullExpn $ do { reserved "when"; expn <- expression; return expn }
+
+  return ExitStmt { expn = expn }
+
+returnStmt :: GenParser Char st Stmt
+returnStmt = do
+  reserved "return"
+
+  expn <- option NullExpn $ parens expression
+
+  return ExitStmt { expn = expn }
+
+-- declarations
+declStmt :: GenParser Char st Stmt
+declStmt = do
+  declType <- choice [ symbol "integer", symbol "boolean" ]
+
+  declarations <- commaSep1 $ declaration $ stringToDecl declType
+  return DeclStmt { decls = declarations }
+
+declaration :: LangType -> GenParser Char st Decl
+declaration lang =
+  scalarDecl lang
+
+scalarDecl :: LangType -> GenParser Char st Decl
+scalarDecl lang = do
   i <- ident
-  return IdentExpr { identifier = i }
+  return ScalarDecl { declType = lang, declIdent = i }
+
+-- expressions
+expression :: GenParser Char st Expn
+expression =
+      identExpn
+  <|> intConstExpn
+  <|> boolConstExpn
+  <|> parens expression
+
+intConstExpn :: GenParser Char st Expn
+intConstExpn = do
+  int <- parseInt
+
+  return IntConstExpn { int = int }
+
+boolConstExpn :: GenParser Char st Expn
+boolConstExpn = do
+  sym <- symbol "true" <|> symbol "false"
+
+  return BoolConstExpn { bool = (sym == "true") }
+
+identExpn :: GenParser Char st Expn
+identExpn = do
+  i <- ident
+  return IdentExpn { identifier = i }
 
 -- the lexer
 langDef :: T.LanguageDef st
@@ -78,3 +149,8 @@ lexer = T.makeTokenParser langDef
 reserved = T.reserved lexer
 operator = T.reservedOp lexer
 ident = T.identifier lexer
+parens = T.parens lexer
+whiteSpace = T.whiteSpace lexer
+parseInt = T.integer lexer
+symbol = T.symbol lexer
+commaSep1 = T.commaSep1 lexer

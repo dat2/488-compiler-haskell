@@ -1,8 +1,10 @@
 import Parser
-import Text.Parsec (parse)
+import AST
+import Text.Parsec (Parsec, ParseError, parse, runParser)
 import Data.Text (splitOn, pack, unpack)
 import Data.List (intercalate)
 
+-- pretty print
 enumerate :: [a] -> [(Int, a)]
 enumerate = zip [1..]
 
@@ -14,20 +16,20 @@ printLineNumbers input =
   in
     intercalate "\n" $ map printLine lines
 
-main =
-  let
-    sourceName = "test.488"
-    source = "begin \n  x <= x\n  y <= y\n  if z then\n    x <= x\n  else\n    z <= y\n  end\nend"
+parseFromFile :: Parsec String () Stmt -> String -> IO (Either ParseError Stmt)
+parseFromFile p fname = do
+  source <- readFile fname
 
-    parser input = case (parse parse488 sourceName input) of
-      Left err -> show err
-      Right x -> show x
-  in
-    do
-      putStrLn "Input"
-      putStrLn "========================="
-      putStrLn $ printLineNumbers source
-      putStrLn ""
-      putStrLn "AST"
-      putStrLn "========================="
-      putStrLn $ parser source
+  putStrLn "Input"
+  putStrLn "========================="
+  putStrLn $ printLineNumbers source
+  putStrLn ""
+
+  return (runParser p () fname source)
+
+main =
+  do
+    either <- parseFromFile parseProgram "test.488"
+    putStrLn "AST"
+    putStrLn "========================="
+    putStrLn $ show either
