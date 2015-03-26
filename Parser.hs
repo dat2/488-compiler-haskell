@@ -35,10 +35,10 @@ statement =
 
 assignStmt :: GenParser Char st Stmt
 assignStmt = do
-  lhs <- expression
+  left <- expression
   operator "<="
-  rhs <- expression
-  return AssignStmt { lhs = lhs, rhs = rhs }
+  right <- expression
+  return AssignStmt { left = left, right = right }
 
 ifThenStmt :: GenParser Char st Stmt
 ifThenStmt = do
@@ -79,7 +79,7 @@ exitStmt = do
 
   expn <- option NullExpn $ do { reserved "when"; expn <- expression; return expn }
 
-  return ExitStmt { expn = expn }
+  return ExitStmt { stmtExpn = expn }
 
 returnStmt :: GenParser Char st Stmt
 returnStmt = do
@@ -87,7 +87,7 @@ returnStmt = do
 
   expn <- option NullExpn $ parens expression
 
-  return ExitStmt { expn = expn }
+  return ExitStmt { stmtExpn = expn }
 
 -- declarations
 declStmt :: GenParser Char st Stmt
