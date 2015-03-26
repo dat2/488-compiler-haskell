@@ -7,16 +7,12 @@ import Text.ParserCombinators.Parsec
 import Text.ParserCombinators.Parsec.Combinator
 
 -- the parser
+parseProgram :: GenParser Char st Program
 parseProgram = do
-  program <- scope
-  eof
-  return program
-
-scope :: GenParser Char st Stmt
-scope = do
   whiteSpace -- ignore comments and whitespace
   body <- between (reserved "begin") (reserved "end") statements
-  return Scope { body = body }
+  eof
+  return Program { programBody = body }
 
 -- statements
 statements :: GenParser Char st [Stmt]
@@ -31,8 +27,15 @@ statement =
   <|> exitStmt
   <|> returnStmt
   <|> scope
-  <|> declStmt
+  <|> choice [ declStmt, functionDecl, procedureDecl ]
 
+-- embedded scope statement
+scope :: GenParser Char st Stmt
+scope = do
+  body <- between (reserved "begin") (reserved "end") statements
+  return Scope { body = body }
+
+-- <expn> <= <expn>
 assignStmt :: GenParser Char st Stmt
 assignStmt = do
   left <- expression
@@ -94,17 +97,43 @@ declStmt :: GenParser Char st Stmt
 declStmt = do
   declType <- choice [ symbol "integer", symbol "boolean" ]
 
-  declarations <- commaSep1 $ declaration $ stringToDecl declType
+  declarations <- commaSep1 $ partialDecl $ langType declType
   return DeclStmt { decls = declarations }
 
-declaration :: LangType -> GenParser Char st Decl
-declaration lang =
-  scalarDecl lang
-
-scalarDecl :: LangType -> GenParser Char st Decl
-scalarDecl lang = do
+partialDecl :: LangType -> GenParser Char st Decl
+partialDecl lang =  do
   i <- ident
   return ScalarDecl { declType = lang, declIdent = i }
+
+scalarDecl :: GenParser Char st Decl
+scalarDecl = do
+  declType <- choice [ symbol "integer", symbol "boolean" ]
+  i <- ident
+  return ScalarDecl { declType = langType declType, declIdent = i }
+
+-- <type> function (<params>) begin <body> end
+functionDecl :: GenParser Char st Stmt
+functionDecl = do
+  -- parse type
+  funcType <- choice [ symbol "integer", symbol "boolean" ]
+  reserved "function"
+
+  -- parse the name
+  name <- ident
+  -- dirty hack with parens, but whatever
+  params <- parens $ commaSep $ scalarDecl
+
+  body <- between (reserved "begin") (reserved "end") statements
+
+  return FunctionDecl { name  = name, params = params, routineBody = body, functionType = langType funcType }
+
+procedureDecl :: GenParser Char st Stmt
+procedureDecl = do
+  reserved "procedure"
+
+  expn <- option NullExpn $ parens expression
+
+  return ExitStmt { stmtExpn = expn }
 
 -- expressions
 expression :: GenParser Char st Expn
@@ -154,3 +183,4 @@ whiteSpace = T.whiteSpace lexer
 parseInt = T.integer lexer
 symbol = T.symbol lexer
 commaSep1 = T.commaSep1 lexer
+commaSep = T.commaSep lexer

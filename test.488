@@ -13,8 +13,12 @@ begin
   % test scope
   begin % statement
 
-  return (x)
-  % test comment
+    return (x)
+    % test comment
+  end
+
+  integer function func() begin
+
   end
 
   % test while

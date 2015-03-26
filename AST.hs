@@ -3,19 +3,16 @@ module AST where
 data LangType = IntegerType | BooleanType | None
   deriving (Show, Eq)
 
-stringToDecl :: String -> LangType
-stringToDecl "integer" = IntegerType
-stringToDecl "boolean" = BooleanType
-stringToDecl _ = None
+langType :: String -> LangType
+langType "integer" = IntegerType
+langType "boolean" = BooleanType
+langType _ = None
+
+newtype Program = Program { programBody :: [Stmt] } deriving Show
 
 data Decl =
     ScalarDecl { declType :: LangType, declIdent :: String }
   | ArrayDecl { declType :: LangType, declIdent :: String, lowerBound1 :: Integer, upperBound1 :: Integer, lowerBound2 :: Integer, upperBound2 :: Integer }
-  deriving Show
-
-data RoutineDecl =
-    FunctionDecl { name :: String, params :: [Decl], routineBody :: [Stmt], functionType :: LangType }
-  | ProcedureDecl { name :: String, params :: [Decl], routineBody :: [Stmt] }
   deriving Show
 
 data Stmt =
@@ -29,6 +26,8 @@ data Stmt =
   | PutStmt { puts :: [Expn] }
   | GetStmt { gets :: [Expn] }
   | DeclStmt { decls :: [Decl] }
+  | FunctionDecl { name :: String, params :: [Decl], routineBody :: [Stmt], functionType :: LangType }
+  | ProcedureDecl { name :: String, params :: [Decl], routineBody :: [Stmt] }
   deriving Show
 
 data ArithOperator = Plus | Minus | Multiply | Divide deriving Show

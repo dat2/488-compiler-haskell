@@ -16,7 +16,7 @@ printLineNumbers input =
   in
     intercalate "\n" $ map printLine lines
 
-parseFromFile :: Parsec String () Stmt -> String -> IO (Either ParseError Stmt)
+parseFromFile :: Parsec String () Program -> String -> IO (Either ParseError Program)
 parseFromFile p fname = do
   source <- readFile fname
 
