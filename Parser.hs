@@ -6,11 +6,14 @@ import qualified Text.Parsec.Token as T
 import Text.ParserCombinators.Parsec
 import Text.ParserCombinators.Parsec.Combinator
 
+beginEndBlock = between (reserved "begin") (reserved "end")
+types = choice [ symbol "integer", symbol "boolean" ]
+
 -- the parser
 parseProgram :: GenParser Char st Program
 parseProgram = do
   whiteSpace -- ignore comments and whitespace
-  body <- between (reserved "begin") (reserved "end") statements
+  body <- beginEndBlock statements
   eof
   return Program { programBody = body }
 
@@ -20,20 +23,16 @@ statements = many statement
 
 statement :: GenParser Char st Stmt
 statement =
-      assignStmt
+      choice [ assignStmt, procedureCallStmt ]
   <|> ifThenStmt
   <|> whileDoStmt
   <|> loopStmt
   <|> exitStmt
   <|> returnStmt
+  <|> putStmt
+  <|> getStmt
   <|> scope
-  <|> choice [ declStmt, functionDecl, procedureDecl ]
-
--- embedded scope statement
-scope :: GenParser Char st Stmt
-scope = do
-  body <- between (reserved "begin") (reserved "end") statements
-  return Scope { body = body }
+  <|> (try functionDeclStmt <|> variableDeclStmt <|> procedureDeclStmt )
 
 -- <expn> <= <expn>
 assignStmt :: GenParser Char st Stmt
@@ -90,50 +89,87 @@ returnStmt = do
 
   expn <- option NullExpn $ parens expression
 
-  return ExitStmt { stmtExpn = expn }
+  return ReturnStmt { stmtExpn = expn }
+
+putStmt :: GenParser Char st Stmt
+putStmt = do
+  reserved "put"
+
+  outputs <- commaSep1 $ expression
+
+  return PutStmt { outputs = outputs }
+
+getStmt :: GenParser Char st Stmt
+getStmt = do
+  reserved "get"
+
+  inputs <- commaSep1 $ expression
+
+  return GetStmt { inputs = inputs }
+
+procedureCallStmt :: GenParser Char st Stmt
+procedureCallStmt = do
+  name <- ident
+
+  stmtArgs <- option [] $ parens $ commaSep expression
+
+  return ProcedureCallStmt { name = name, stmtArgs = stmtArgs }
+
+-- embedded scope statement
+scope :: GenParser Char st Stmt
+scope = do
+  body <- beginEndBlock statements
+  return Scope { body = body }
 
 -- declarations
-declStmt :: GenParser Char st Stmt
-declStmt = do
-  declType <- choice [ symbol "integer", symbol "boolean" ]
+variableDeclStmt :: GenParser Char st Stmt
+variableDeclStmt = do
+  declType <- types
 
-  declarations <- commaSep1 $ partialDecl $ langType declType
+  declarations <- commaSep $ identDecl $ langType declType
   return DeclStmt { decls = declarations }
 
-partialDecl :: LangType -> GenParser Char st Decl
-partialDecl lang =  do
+identDecl :: LangType -> GenParser Char st Decl
+identDecl lang =  do
   i <- ident
   return ScalarDecl { declType = lang, declIdent = i }
 
-scalarDecl :: GenParser Char st Decl
-scalarDecl = do
-  declType <- choice [ symbol "integer", symbol "boolean" ]
+paramDecl :: GenParser Char st Decl
+paramDecl = do
+  declType <- types
   i <- ident
   return ScalarDecl { declType = langType declType, declIdent = i }
 
 -- <type> function (<params>) begin <body> end
-functionDecl :: GenParser Char st Stmt
-functionDecl = do
+functionDeclStmt :: GenParser Char st Stmt
+functionDeclStmt = do
   -- parse type
-  funcType <- choice [ symbol "integer", symbol "boolean" ]
+  funcType <- types
   reserved "function"
 
   -- parse the name
   name <- ident
-  -- dirty hack with parens, but whatever
-  params <- parens $ commaSep $ scalarDecl
 
-  body <- between (reserved "begin") (reserved "end") statements
+  -- get the parameters
+  params <- option [] $ parens $ commaSep paramDecl
+
+  body <- beginEndBlock statements
 
   return FunctionDecl { name  = name, params = params, routineBody = body, functionType = langType funcType }
 
-procedureDecl :: GenParser Char st Stmt
-procedureDecl = do
+procedureDeclStmt :: GenParser Char st Stmt
+procedureDeclStmt = do
   reserved "procedure"
 
-  expn <- option NullExpn $ parens expression
+  -- parse the name
+  name <- ident
 
-  return ExitStmt { stmtExpn = expn }
+  -- get the parameters
+  params <- option [] $ parens $ commaSep paramDecl
+
+  body <- beginEndBlock statements
+
+  return ProcedureDecl { name  = name, params = params, routineBody = body }
 
 -- expressions
 expression :: GenParser Char st Expn

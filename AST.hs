@@ -16,15 +16,16 @@ data Decl =
   deriving Show
 
 data Stmt =
-    Scope { body :: [Stmt] }
-  | AssignStmt { left :: Expn, right :: Expn }
+    AssignStmt { left :: Expn, right :: Expn }
   | IfThenStmt { condition :: Expn, trueBody :: [Stmt], falseBody :: [Stmt] }
   | WhileDoStmt { condition :: Expn, body :: [Stmt] }
   | LoopStmt { body :: [Stmt] }
   | ExitStmt { stmtExpn :: Expn }
   | ReturnStmt { stmtExpn :: Expn }
-  | PutStmt { puts :: [Expn] }
-  | GetStmt { gets :: [Expn] }
+  | PutStmt { outputs :: [Expn] }
+  | GetStmt { inputs :: [Expn] } -- todo only use identifiers / arrays
+  | ProcedureCallStmt { name :: String, stmtArgs :: [Expn] }
+  | Scope { body :: [Stmt] }
   | DeclStmt { decls :: [Decl] }
   | FunctionDecl { name :: String, params :: [Decl], routineBody :: [Stmt], functionType :: LangType }
   | ProcedureDecl { name :: String, params :: [Decl], routineBody :: [Stmt] }
@@ -37,13 +38,13 @@ data CompareOperator = Eq | Neq | Lt | Leq | Gt | Geq deriving Show
 
 data Expn =
     IdentExpn { identifier :: String }
-  | SubsExpn { identifier :: String }
+  | SubsExpn { identifier :: String, expn1 :: Expn, expn2 :: Expn }
   | UnaryExpn { uop :: UnaryOperator, expn :: Expn }
   | ArithExpn { aop :: ArithOperator, lhs :: Expn, rhs :: Expn }
   | BoolExpn { bop :: BoolOperator, lhs :: Expn, rhs :: Expn }
   | CompareExpn { op :: CompareOperator, lhs :: Expn, rhs :: Expn }
   | AnonFuncExpn { funcBody :: [Stmt], expn :: Expn }
-  | FuncCallExpn { identifier :: String, args :: [Expn] }
+  | FuncCallExpn { identifier :: String, expnArgs :: [Expn] }
   | TextConstExpn { text :: String }
   | IntConstExpn { int :: Integer }
   | BoolConstExpn { bool :: Bool }

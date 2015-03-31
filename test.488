@@ -2,12 +2,12 @@
 begin
   integer x, y
   boolean z
-  x <= x
-  y <= y
+ % x <= x
+  %y <= y
   if z then
-    x <= 1
+   % x <= 1
   else
-    z <= false
+    %z <= false
   end
 
   % test scope
@@ -17,8 +17,12 @@ begin
     % test comment
   end
 
-  integer function func() begin
+  integer function func begin
+    return (1)
+  end
 
+  procedure proc begin
+    return
   end
 
   % test while
@@ -30,4 +34,9 @@ begin
   loop
     x <= y
   end
+
+  put 123, 123, true
+  get x
+
+  proc
 end
